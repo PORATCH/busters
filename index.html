@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7cb85203b150d595514aab9570f57017"></script>
 
     <script>
         tailwind.config = {
@@ -754,14 +755,12 @@
 
     </div>
 
-    <!-- ====== EXPLORE MAIN ====== -->
     <div id="screen-explore" class="absolute inset-0 z-50 pt-[76px] flex flex-col pointer-events-none overflow-hidden">
-        <main id="explore-content" class="flex-1 w-full flex flex-col items-center justify-center text-center px-6 leading-relaxed bg-[#f3f4f6] pointer-events-auto relative" style="border-radius: 40px 40px 0 0; box-shadow: inset 0 20px 20px -10px rgba(0,0,0,0.05), 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <!-- 하단 바운스 시 밑단이 비어보이는 것을 방지하는 배경 연장 블록 -->
+        <main id="explore-content" class="flex-1 w-full flex flex-col bg-[#f3f4f6] pointer-events-auto relative" style="border-radius: 40px 40px 0 0; box-shadow: inset 0 20px 20px -10px rgba(0,0,0,0.05), 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <!-- Map Container -->
+            <div id="kakao-map" class="w-full h-full" style="border-radius: 40px 40px 0 0; overflow: hidden;"></div>
+            
             <div class="absolute top-[99%] left-0 w-full h-[200px] bg-[#f3f4f6]"></div>
-            <span class="material-symbols-outlined text-[64px] text-gray-400 mb-4 animate-bounce">map</span>
-            <h2 class="text-[20px] font-bold text-gray-800 mb-2">부산을 누빌 준비가 되셨나요?</h2>
-            <p class="text-[14px] text-gray-500">주변의 미션을 확인하고 특별한 배지를 모으세요.</p>
         </main>
     </div>
 
@@ -818,7 +817,9 @@
    점수 변수
 ====================================================== */
 let Flame = 0, Wing = 0, Heart = 0;
-let currentUserType = 'F'; // Default placeholder
+let currentUserType = 'F'; 
+let kakaoMap = null;
+let mapInitialized = false;
 
 /* ======================================================
    점수 매트릭스
@@ -928,10 +929,55 @@ function toggleExploreNav() {
     if (isExplore) {
         exploreScreen.classList.remove('pointer-events-none');
         exploreContent.style.transform = 'translateY(0)';
+        
+        // 지도 초기화 또는 리아웃 업데이트
+        setTimeout(() => {
+            if (!mapInitialized) {
+                initKakaoMap();
+            } else if (kakaoMap) {
+                kakaoMap.relayout();
+                // 중심점 재설정 (부산 시청)
+                const moveLatLon = new kakao.maps.LatLng(35.1795543, 129.0756416);
+                kakaoMap.setCenter(moveLatLon);
+            }
+        }, 600); // UI 애니메이션 완료 후 실행
     } else {
         exploreScreen.classList.add('pointer-events-none');
         exploreContent.style.transform = 'translateY(100%)';
     }
+}
+
+/* ======================================================
+   카카오 지도 초기화
+====================================================== */
+function initKakaoMap() {
+    const container = document.getElementById('kakao-map');
+    if (!container) return;
+
+    const options = {
+        center: new kakao.maps.LatLng(35.1795543, 129.0756416), // 부산 시청 기준
+        level: 8 // 시티뷰 레벨
+    };
+
+    kakaoMap = new kakao.maps.Map(container, options);
+    mapInitialized = true;
+
+    // 추천 탐험 포인트 마커 추가
+    const points = [
+        { title: '해운대', lat: 35.1587, lng: 129.1603 },
+        { title: '광안리', lat: 35.1532, lng: 129.1189 },
+        { title: '영도 흰여울마을', lat: 35.0789, lng: 129.0444 },
+        { title: '감천문화마을', lat: 35.0975, lng: 129.0104 }
+    ];
+
+    points.forEach(point => {
+        const markerPosition = new kakao.maps.LatLng(point.lat, point.lng);
+        const marker = new kakao.maps.Marker({
+            position: markerPosition,
+            title: point.title
+        });
+        marker.setMap(kakaoMap);
+    });
 }
 
 function goToMain() {
